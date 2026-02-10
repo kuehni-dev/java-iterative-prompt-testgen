@@ -1,0 +1,264 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+OS_ID=$(grep '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+if [[ $OS_ID != "arch" ]]; then
+    echo "Not running on Arch Linux: $OS_ID"
+    exit 1
+fi
+
+if [[ $EUID -eq 0 ]]; then
+  echo "Do not run $0 as root"
+  exit 1
+fi
+
+if [[ $# -gt 0 ]]; then
+  if [[ $1 == "uninstall" ]]; then
+    echo
+    echo "################################################################################"
+    echo "# Uninstalling service...                                                      #"
+    echo "################################################################################"
+
+    systemctl --user stop iterative-prompt-testgen || echo "Cannot stop iterative-prompt-testgen!"
+    systemctl --user disable iterative-prompt-testgen || echo "Cannot disable iterative-prompt-testgen!"
+    systemctl --user daemon-reload
+    systemctl --user reset-failed
+    rm -f ~/.config/systemd/user/iterative-prompt-testgen.service || echo "Cannot delete iterative-prompt-testgen.service!"
+
+    echo
+    echo "################################################################################"
+    echo "# Uninstalling tools...                                                        #"
+    echo "################################################################################"
+    rm -rf ~/tools || echo "Cannot delete ~/tools!"
+
+    exit 0
+  fi
+
+  USAGE="Usage: $0 [-h|--help|uninstall]"
+
+  if [[ $1 != "-h" ]] && [[ $1 != "--help" ]]; then
+    echo "Unsupported argument \"$1\"!"
+    echo
+    echo "$USAGE"
+    echo
+
+    exit 1
+  fi
+
+  if [[ $# -gt 0 ]]; then
+    echo "Too many arguments!"
+    echo
+    echo "$USAGE"
+    echo
+
+    exit 1
+  fi
+
+  echo "Install and configure requirements, defects4j and iterative-prompt-testgen."
+  echo
+  echo "$USAGE"
+  echo
+  echo "Options:"
+  echo "  -h,--help     Shows this help page, then exits."
+  echo
+  echo "Commands:"
+  echo "  uninstall     If present, uninstalls defects4j and iterative-prompt-testgen"
+  echo "                instead. This does not uninstall requirements."
+  echo
+
+  exit 0
+fi
+
+
+echo
+echo "################################################################################"
+echo "# Updating system and installing requirements...                               #"
+echo "################################################################################"
+
+sudo pacman -Syu --noconfirm --needed \
+  base-devel \
+  go \
+  which \
+  tar \
+  git \
+  podman-compose \
+  jdk25-openjdk
+
+echo "# Setting timezone to Europe/Zurich..."
+sudo timedatectl set-timezone Europe/Zurich
+
+echo "# Enable lingering (running services while user is logged out)..."
+sudo loginctl enable-linger
+
+echo "# Downloading and installing yay..."
+mkdir -p ~/tools
+cd ~/tools
+
+git clone https://aur.archlinux.org/yay.git yay
+cd yay
+makepkg -si --noconfirm
+
+echo "# Installing h2"
+yay -Sy --noconfirm --needed \
+  h2
+
+
+echo
+echo "################################################################################"
+echo "# Cloning defects4j...                                                         #"
+echo "################################################################################"
+
+cd ~/tools
+git clone https://github.com/rjust/defects4j.git defects4j
+cd defects4j
+git -c advice.detachedHead=false checkout 8022adcd685ae8f591f0cb5d71282e5c93798e4d
+
+d4j_home="$PWD"
+
+
+echo
+echo "################################################################################"
+echo "# Cloning iterative-prompt-testgen...                                          #"
+echo "################################################################################"
+
+cd ~/tools
+git clone https://github.com/kuehni-dev/java-iterative-prompt-testgen.git iterative-prompt-testgen
+
+
+echo
+echo "################################################################################"
+echo "# Building iterative-prompt-testgen...                                         #"
+echo "################################################################################"
+
+cd ~/tools/iterative-prompt-testgen
+./gradlew build
+cd build/distributions
+
+# Un-tar all *.tar files (there is only one after running gradle build
+tar xf ./*.tar
+# change directory to the extracted folder
+cd ./*/
+# The extracted folder contains a bin directory with the executable
+testgen_exe="$PWD/bin/iterative-prompt-testgen"
+
+
+echo
+echo "################################################################################"
+echo "# Configuring iterative-prompt-testgen...                                      #"
+echo "################################################################################"
+
+while true; do
+  echo
+  read -r -p "Enter your OpenAI API key: " openai_key
+  echo
+
+  if [[ "$openai_key" =~ ^sk-[A-Za-z0-9_-]*$ ]]; then
+    break
+  fi
+
+  echo "Invalid OpenAI API key. A valid key starts with \"sk-\" and only contains letters, digits, hyphens, and underscores."
+done
+
+cat >~/tools/iterative-prompt-testgen/.env <<EOF
+OPENAI_API_KEY=${openai_key}
+
+MAX_OUTPUT_TOKENS=30000
+
+DEFECTS4J_HOME=$d4j_home
+DEFECTS4J_BUGS="JacksonCore,3
+JacksonCore,4
+JacksonCore,5
+JacksonCore,6
+JacksonCore,7
+JacksonCore,8
+JacksonCore,13
+JacksonCore,14
+JacksonCore,15
+JacksonCore,16
+Gson,3
+Gson,5
+Gson,6
+Gson,7
+Gson,8
+Gson,10
+Gson,11
+Gson,12
+Gson,13
+Gson,15
+Lang,1
+Lang,3
+Lang,4
+Lang,5
+Lang,13
+Lang,16
+Lang,21
+Lang,32
+Lang,33
+Lang,37"
+
+COMPOSE_PROGRAM=podman-compose
+
+RUNS=40
+MAX_LLM_REPROMPTS_FOR_FIXING_TEST=5
+FEEDBACK_ITERATIONS=10
+EOF
+
+echo "Environment configured: ~/tools/iterative-prompt-testgen/.env"
+
+echo
+echo "################################################################################"
+echo "# Installing iterative-prompt-testgen service...                               #"
+echo "################################################################################"
+
+cd ~
+mkdir -p .config/systemd/user
+
+cat >~/.config/systemd/user/iterative-prompt-testgen.service <<EOF
+[Unit]
+Description=iterative-prompt-testgen
+
+[Service]
+ExecStart=${testgen_exe}
+WorkingDirectory=${HOME}/tools/iterative-prompt-testgen
+Restart=always
+
+[Install]
+WantedBy=default.target
+EOF
+
+
+mkdir -p ~/tools/db-backups
+cat >~/tools/db-backup <<EOF
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+now=\$(date +"%Y-%m-%d_%H-%M-%S")
+path="~/tools/db-backups/\${now}.zip"
+
+exec java -cp /usr/share/java/h2/h2.jar org.h2.tools.Shell \
+          -url "jdbc:h2:file:~/tools/iterative-prompt-testgen/data/runs.h2;AUTO_SERVER=TRUE" \
+          -sql "BACKUP TO '\$path';"
+EOF
+chmod u+x ~/tools/db-backup
+
+
+echo
+echo "Service installed!"
+echo
+echo "Start with"
+echo "    systemctl --user start iterative-prompt-testgen"
+echo
+echo "Enable autorun on OS start with"
+echo "    systemctl --user enable iterative-prompt-testgen"
+echo
+echo "View service logs with"
+echo "    journalctl -t iterative-prompt-testgen"
+echo
+echo "The output database will be located at"
+echo "    ~/tools/iterative-prompt-testgen/data/runs.h2.mv.db"
+echo
+echo "Run ~/tools/db-backup to create a backup of the database. Backups are stored in"
+echo "    ~/tools/db-backups"
+echo
