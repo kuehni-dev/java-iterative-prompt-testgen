@@ -1,0 +1,24 @@
+WITH STEP1 AS (
+    SELECT S.TYPE   FAILING_STAGE,
+           ROW_NUMBER() OVER (
+               PARTITION BY S.ITERATION_ID
+               ORDER BY S.CREATED_AT
+               ) AS RN
+    FROM RUN R
+             LEFT JOIN TARGET T ON R.ID = T.RUN_ID
+             LEFT JOIN ITERATION I ON I.TARGET_ID = T.ID
+             LEFT JOIN FIXER_STAGE S ON I.ID = S.ITERATION_ID AND NOT S.SUCCESS -- Failing stages
+    WHERE R.COMPLETED_AT IS NOT NULL)
+SELECT COUNT(*)                                              TOTAL_GENERATIONS,
+       COUNT(CASE WHEN FAILING_STAGE = 'PARSE' THEN 1 END)   PARSE_FAILURES,
+       COUNT(CASE WHEN FAILING_STAGE = 'COMPILE' THEN 1 END) COMPILE_FAILURES,
+       COUNT(CASE WHEN FAILING_STAGE = 'TEST' THEN 1 END)    TEST_FAILURES,
+       COUNT(CASE
+                 WHEN FAILING_STAGE IS NOT NULL AND
+                      FAILING_STAGE NOT IN ('PARSE', 'COMPILE', 'TEST')
+                     THEN 1 END)                             OTHER_FAILURES,
+       COUNT(CASE WHEN FAILING_STAGE IS NULL THEN 1 END)     VALID_GENERATIONS
+FROM STEP1
+WHERE FAILING_STAGE IS NULL -- Keep iteration when no stage failed
+   OR RN = 1 -- Only get the first failing stage per test
+;

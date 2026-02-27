@@ -1,0 +1,24 @@
+WITH STEP1 AS (
+    SELECT 1                                                    POSITION,
+           'RUN'                                                TYPE,
+           MAX(DATEDIFF(MILLISECOND, CREATED_AT, COMPLETED_AT)) DURATION_MS
+    FROM RUN
+    UNION
+    SELECT 2,
+           'FEEDBACK_LOOP',
+           MAX(DATEDIFF(MILLISECOND, CREATED_AT, COMPLETED_AT))
+    FROM FEEDBACK_LOOP
+    UNION
+    SELECT 3,
+           'ITERATION',
+           MAX(DATEDIFF(MILLISECOND, CREATED_AT, COMPLETED_AT))
+    FROM ITERATION
+    UNION
+    SELECT 4,
+           'PROMPT',
+           MAX(DATEDIFF(MILLISECOND, CREATED_AT, COMPLETED_AT))
+    FROM PROMPT)
+SELECT *,
+       FORMAT_DURATION_MS(DURATION_MS) DURATION_FORMATTED
+FROM STEP1;
+

@@ -1,0 +1,10 @@
+D4J_PROJECT,FEEDBACK_TYPE,FREQUENCY,ERROR
+Lang,,28,Fixer (out of reprompts)
+Lang,,3,Fixer (no test methods)
+Lang,,1,Fixer (parse exception)
+Lang,COVERAGE,73,Fixer (out of reprompts)
+Lang,COVERAGE,41,Evaluation (test fail)
+Lang,COVERAGE,3,Fixer (no test methods)
+Lang,MUTATION,63,Fixer (out of reprompts)
+Lang,MUTATION,41,Evaluation (test fail)
+Lang,MUTATION,2,Fixer (parse exception)

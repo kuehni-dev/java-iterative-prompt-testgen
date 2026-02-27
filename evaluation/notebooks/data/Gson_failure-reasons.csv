@@ -1,0 +1,13 @@
+D4J_PROJECT,FEEDBACK_TYPE,FREQUENCY,ERROR
+Gson,,24,Fixer (out of reprompts)
+Gson,,7,Fixer (parse exception)
+Gson,,2,Fixer (no test methods)
+Gson,COVERAGE,127,Fixer (out of reprompts)
+Gson,COVERAGE,13,Evaluation (test fail)
+Gson,COVERAGE,8,Fixer (no test methods)
+Gson,COVERAGE,8,Fixer (parse exception)
+Gson,MUTATION,112,Fixer (out of reprompts)
+Gson,MUTATION,22,Evaluation (test fail)
+Gson,MUTATION,10,Fixer (no test methods)
+Gson,MUTATION,7,Fixer (parse exception)
+Gson,MUTATION,1,OpenAI API error (other)

@@ -1,0 +1,48 @@
+WITH STEP1 AS (
+    SELECT (SELECT DISTINCT D4J_PROJECT FROM RUN)                    PROJECT,
+           (SELECT COUNT(*) FROM RUN WHERE COMPLETED_AT IS NOT NULL) COMPLETED_RUNS,
+           (SELECT COUNT(*)
+            FROM FEEDBACK_LOOP F
+                     JOIN TARGET T ON F.TARGET_ID = T.ID
+                     JOIN RUN R ON T.RUN_ID = R.ID
+            WHERE R.COMPLETED_AT IS NOT NULL
+              AND F.COMPLETED_AT IS NOT NULL
+              AND F.TYPE = 'COVERAGE')                               COMPLETED_COVERAGE_LOOPS,
+           (SELECT COUNT(*)
+            FROM FEEDBACK_LOOP F
+                     JOIN TARGET T ON F.TARGET_ID = T.ID
+                     JOIN RUN R ON T.RUN_ID = R.ID
+            WHERE R.COMPLETED_AT IS NOT NULL
+              AND F.COMPLETED_AT IS NOT NULL
+              AND F.TYPE = 'COVERAGE'
+              AND F.SUCCESS)                                         SUCCESSFUL_COVERAGE_LOOPS,
+           (SELECT COUNT(*)
+            FROM FEEDBACK_LOOP F
+                     JOIN TARGET T ON F.TARGET_ID = T.ID
+                     JOIN RUN R ON T.RUN_ID = R.ID
+            WHERE R.COMPLETED_AT IS NOT NULL
+              AND F.COMPLETED_AT IS NOT NULL
+              AND F.TYPE = 'MUTATION')                               COMPLETED_MUTATION_LOOPS,
+           (SELECT COUNT(*)
+            FROM FEEDBACK_LOOP F
+                     JOIN TARGET T ON F.TARGET_ID = T.ID
+                     JOIN RUN R ON T.RUN_ID = R.ID
+            WHERE R.COMPLETED_AT IS NOT NULL
+              AND F.COMPLETED_AT IS NOT NULL
+              AND F.TYPE = 'MUTATION'
+              AND F.SUCCESS)                                         SUCCESSFUL_MUTATION_LOOPS)
+SELECT PROJECT,
+       COMPLETED_RUNS,
+       COMPLETED_COVERAGE_LOOPS,
+       SUCCESSFUL_COVERAGE_LOOPS,
+       CASE
+           WHEN COMPLETED_COVERAGE_LOOPS = 0 THEN 0.0
+           ELSE TO_CHAR(SUCCESSFUL_COVERAGE_LOOPS * 100.0 / COMPLETED_COVERAGE_LOOPS, 'FM990.0') END ||
+       ' %' COVERAGE_LOOP_SUCCESS_RATE,
+       COMPLETED_MUTATION_LOOPS,
+       SUCCESSFUL_MUTATION_LOOPS,
+       CASE
+           WHEN COMPLETED_MUTATION_LOOPS = 0 THEN 0.0
+           ELSE TO_CHAR(SUCCESSFUL_MUTATION_LOOPS * 100.0 / COMPLETED_MUTATION_LOOPS, 'FM990.0') END ||
+       ' %' MUTATION_LOOP_SUCCESS_RATE
+FROM STEP1;

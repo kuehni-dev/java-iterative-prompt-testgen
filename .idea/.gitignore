@@ -2,6 +2,7 @@
 /jarRepositories.xml
 /compiler.xml
 /libraries/
+/db-forest-config.xml
 # Default ignored files
 /shelf/
 /workspace.xml

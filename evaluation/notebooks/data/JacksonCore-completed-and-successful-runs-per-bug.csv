@@ -1,0 +1,11 @@
+D4J_PROJECT,D4J_BUG_ID,ALL_RUNS,COMPLETED_RUNS,SUCCESSFUL_RUNS,SUCCESS_RATE
+JacksonCore,3,56,55,15,26.8 %
+JacksonCore,4,55,55,17,30.9 %
+JacksonCore,5,55,55,31,56.4 %
+JacksonCore,6,55,55,25,45.5 %
+JacksonCore,7,55,55,0,0.0 %
+JacksonCore,8,55,55,20,36.4 %
+JacksonCore,13,55,55,1,1.8 %
+JacksonCore,14,55,55,19,34.5 %
+JacksonCore,15,55,55,37,67.3 %
+JacksonCore,16,54,53,35,64.8 %

@@ -1,0 +1,33 @@
+WITH STEP1 AS (
+    SELECT 1                                                    POSITION,
+           'RUN'                                                TYPE,
+           SUM(DATEDIFF(MILLISECOND, CREATED_AT, COMPLETED_AT)) DURATION_MS
+    FROM RUN
+    UNION
+    SELECT 2,
+           'FEEDBACK_LOOP',
+           SUM(DATEDIFF(MILLISECOND, CREATED_AT, COMPLETED_AT))
+    FROM FEEDBACK_LOOP
+    UNION
+    SELECT 3,
+           'ITERATION',
+           SUM(DATEDIFF(MILLISECOND, CREATED_AT, COMPLETED_AT))
+    FROM ITERATION
+    UNION
+    SELECT 4,
+           'PROMPT',
+           SUM(DATEDIFF(MILLISECOND, CREATED_AT, COMPLETED_AT))
+    FROM PROMPT),
+     STEP2 AS (
+    SELECT *
+    FROM STEP1
+    UNION
+    SELECT 5,
+           'LOCAL_PROCESSING',
+           (SELECT DURATION_MS FROM STEP1 WHERE TYPE = 'RUN') -
+           (SELECT DURATION_MS FROM STEP1 WHERE TYPE = 'PROMPT'))
+SELECT *,
+       CAST(DURATION_MS / 1000.0 / 60 / 60 / 24 AS DECIMAL(5, 2)) DURATION_DAYS,
+       FORMAT_DURATION_MS(DURATION_MS)                            DURATION_FORMATTED
+FROM STEP2;
+

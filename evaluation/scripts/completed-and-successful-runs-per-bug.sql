@@ -1,0 +1,13 @@
+WITH STEP1 AS (
+    SELECT R.D4J_PROJECT,
+           R.D4J_BUG_ID,
+           COUNT(*)                                               ALL_RUNS,
+           COUNT(CASE WHEN R.COMPLETED_AT IS NOT NULL THEN 1 END) COMPLETED_RUNS,
+           COUNT(CASE WHEN R.SUCCESS THEN 1 END)                  SUCCESSFUL_RUNS
+    FROM RUN R
+    GROUP BY R.D4J_PROJECT, R.D4J_BUG_ID)
+SELECT *,
+       CASE
+           WHEN ALL_RUNS = 0 THEN 0.0
+           ELSE LPAD(TO_CHAR(SUCCESSFUL_RUNS * 100.0 / ALL_RUNS, 'FM990.0'), 5, ' ') END || ' %' SUCCESS_RATE
+FROM STEP1;
