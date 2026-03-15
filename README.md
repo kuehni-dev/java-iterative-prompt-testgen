@@ -1,6 +1,20 @@
+## Project Structure
+
+| Location                                                           | Description                                                                                                                                                                       |
+|:-------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`/src/`](src)                                                     | Source code of the `iterative-prompt-testgen` prototype.                                                                                                                          |
+| [`/build/`](build)                                                 | Gradle output directory.                                                                                                                                                          |
+| [`/evaluation/scripts/`](evaluation/scripts)                       | SQL scripts for collecting data to CSV files.                                                                                                                                     |
+| [`/evaluation/notebooks/`](evaluation/notebooks)                   | Jupyter notebooks for creating diagrams as results for the thesis using the CSV files.                                                                                            |
+| [`/evaluation/notebooks/data/`](evaluation/notebooks/data)         | Data extracted from database as part of the thesis.                                                                                                                               |
+| [`/evaluation/notebooks/data/out/`](evaluation/notebooks/data/out) | Data aggregated by Jupyter notebooks.                                                                                                                                             |
+| [`/evaluation/notebooks/out/`](evaluation/notebooks/out)           | Generated diagrams.                                                                                                                                                               |
+| [`/configure-arch`](configure-arch)                                | Script for configuring an Arch Linux machine for experiments (see [Automatically Configure the Experimental Environment](#automatically-configure-the-experimental-environment)). |
+| [`/gradlew`](gradlew)                                              | Gradle Wrapper script (sh). Use [`/gradlew.bat`](gradlew.bat) on Windows.                                                                                                         |
+
 ## Automatically Configure the Experimental Environment
 
-- Set up a (virtual) machine:
+- Set up a machine (e.g. an OpenStack compute instance or a virtual machine):
   - Arch Linux (e.g., kernel 6.18.9-arch1-2)
   - Minimum RAM: 2 GB
   - Minimum Disk: 20 GB
@@ -10,7 +24,7 @@
 - Run it without sudo: `./configure-arch`
 
 > [!Important]
-> Do not run `./configure-arch` on your development machine as it will install packages and re-configures the system.
+> Do not run `./configure-arch` on your development machine as it will install packages and re-configure the system.
 
 This script will install requirements, like java, git, and podman using `pacman`.
 This requires sudo privileges.
@@ -39,8 +53,12 @@ To create a backup of the database, run `~/tools/db-backup`. Backups are stored 
 - Clone [defects4j](https://github.com/rjust/defects4j)
   - Checkout revision `8022adcd685ae8f591f0cb5d71282e5c93798e4d`
 
-> [!Note]
+> [!Important]
 > This app patches `Dockerfile` and `docker-compose.yaml` of Defects4J to ensure reproducibility.
+
+> [!Note]
+> This project was developed for Linux. It may also work on Windows, but this is not guaranteed because it has not been
+> tested.
 
 ### Environment Variables
 
@@ -74,7 +92,6 @@ RUNS=40
 MAX_LLM_REPROMPTS_FOR_FIXING_TEST=5
 FEEDBACK_ITERATIONS=10
 ```
-
 
 ### Starting the App
 
